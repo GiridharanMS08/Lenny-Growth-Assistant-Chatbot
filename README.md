@@ -14,6 +14,7 @@ Steps to Execute
 Open Command Prompt and run:
 
 git clone https://github.com/GiridharanMS08/Lenny-Growth-Assistant-Chatbot.git
+
 cd Lenny-Growth-Assistant-Chatbot
 
 
