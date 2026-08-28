@@ -131,7 +131,7 @@ Ctrl + C
 
 This will stop the running application.
 
-11.Knowledge ingestion
+11.Knowledge ingestion(Not Required now use if you want chunk again)
 ------------------------
 
 http://127.0.0.1:8000/docs
