@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*.local
+frontend/node_modules/
+frontend/dist/
+
+# Runtime logs are intentionally kept in the submission for observability; do not ignore logs/.
