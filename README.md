@@ -101,7 +101,9 @@ Application startup complete
 8. Open the Frontend
 --------------------
 
-Navigate to the Frontend Terminal.
+Navigate to the Frontend Terminal. 
+
+Local:   http://localhost:5173/
 
 Ctrl + Click the displayed frontend URL.
 
