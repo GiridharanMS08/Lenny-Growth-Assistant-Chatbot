@@ -131,6 +131,18 @@ Ctrl + C
 
 This will stop the running application.
 
+11.Knowledge ingestion
+------------------------
+
+http://127.0.0.1:8000/docs
+
+Then:
+
+Go to the POST /ingestion endpoint.
+Click Try it out.
+Click Execute.
+Wait for the ingestion process to complete.
+The response will show the number of chunks indexed.
 
 
 
