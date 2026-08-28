@@ -425,7 +425,7 @@ echo http://localhost:5173
 echo.
 echo Knowledge Ingestion:
 echo WARNING: This may overwrite existing data.
-echo http://127.0.0.1:8000/ingestion
+echo http://127.0.0.1:8000/docs
 echo.
 echo Selected AI Model:
 echo %MODEL_NAME%
