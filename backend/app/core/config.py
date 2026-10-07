@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     )
     openrouter_api_key: str = Field(default="", validation_alias="OPENROUTER_API_KEY")
     openrouter_model: str = Field(
-        default="google/gemma-4-31b-it:free", validation_alias="OPENROUTER_MODEL"
+        default="nvidia/nemotron-3.5-lightning:free", validation_alias="OPENROUTER_MODEL"
     )
 
     cloud_provider: Literal["gemini", "openai"] = Field(

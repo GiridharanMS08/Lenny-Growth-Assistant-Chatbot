@@ -9,6 +9,40 @@ from app.core.errors import ConfigurationError, LLMProviderError, LLMProviderUna
 from app.llm.base import BaseLLMClient, LLMRequest, LLMResponse
 
 
+def _rate_limit_message(response: httpx.Response, error: dict[str, object]) -> str:
+    """Classify 429s without exposing upstream messages, credentials, or prompts."""
+    metadata = error.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    source = str(metadata.get("limit_source", "")).lower()
+    detail = str(error.get("message", "")).lower()
+    if (
+        source.startswith("upstream_provider")
+        or metadata.get("provider_error_code") is not None
+        or metadata.get("provider_code") is not None
+        or "rate-limited upstream" in detail
+    ):
+        message = (
+            "The free model's provider is temporarily rate-limited or overloaded. "
+            "This is a provider-capacity limit, not your daily account quota. "
+            "Retry later or choose another :free model."
+        )
+    elif "daily" in source or "free-models-per-day" in detail:
+        message = "OpenRouter's daily free-request limit is reached. Wait for the daily quota to reset."
+    elif "minute" in source or "free-models-per-min" in detail:
+        message = "OpenRouter's per-minute free-request limit is reached. Wait before retrying."
+    else:
+        message = (
+            "OpenRouter rate-limited the free request. The response did not identify "
+            "an account or provider limit; your daily quota may still be available. Retry later."
+        )
+    retry_after = response.headers.get("retry-after", "")
+    if retry_after.isascii() and retry_after.isdigit() and len(retry_after) <= 5:
+        seconds = int(retry_after)
+        if 0 < seconds <= 86400:
+            message += f" Retry after {seconds} seconds."
+    return message
+
+
 class OpenRouterClient(BaseLLMClient):
     provider = "cloud"
 
@@ -47,9 +81,12 @@ class OpenRouterClient(BaseLLMClient):
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             try:
-                error_message = str(exc.response.json().get("error", {}).get("message", "")).lower()
-            except (ValueError, AttributeError):
-                error_message = ""
+                payload = exc.response.json()
+            except ValueError:
+                payload = {}
+            error = payload.get("error", {}) if isinstance(payload, dict) else {}
+            error = error if isinstance(error, dict) else {}
+            error_message = str(error.get("message", "")).lower()
             if status == 403 and "key limit exceeded" in error_message:
                 message = "OpenRouter blocked the free-model request with a key-limit restriction. No paid model was tried."
             elif status in {401, 403}:
@@ -57,7 +94,7 @@ class OpenRouterClient(BaseLLMClient):
             elif status == 402:
                 message = "OpenRouter rejected the free-model request. Paid models are disabled."
             elif status == 429:
-                message = "OpenRouter free-model quota or rate limit reached. Retry later."
+                message = _rate_limit_message(exc.response, error)
             elif status == 404:
                 message = "The selected free model is unavailable. Choose an available :free model; paid fallback is disabled."
             else:

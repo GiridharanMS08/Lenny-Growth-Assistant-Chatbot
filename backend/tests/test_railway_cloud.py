@@ -5,6 +5,9 @@ import json
 import groq
 import httpx
 import pytest
+import supabase
+from fastapi.testclient import TestClient
+
 from app import main
 from app.api.routes import models
 from app.core.config import Settings
@@ -13,9 +16,6 @@ from app.llm.base import LLMMessage, LLMRequest
 from app.llm.groq_client import GroqClient
 from app.llm.openrouter_client import OpenRouterClient
 from app.rag import cloud
-from fastapi.testclient import TestClient
-
-import supabase
 
 
 def cloud_settings(**overrides) -> Settings:
@@ -83,14 +83,14 @@ def test_supabase_sdk_rpc_uses_384_vectors_and_closes_http_client(monkeypatch) -
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("status", [200, 401, 402, 403, 429])
-async def test_openrouter_llama_and_sanitized_errors(monkeypatch, status: int) -> None:
+async def test_openrouter_free_model_and_sanitized_errors(monkeypatch, status: int) -> None:
     original = httpx.AsyncClient
 
     def handler(request):
         assert request.url == "https://openrouter.ai/api/v1/chat/completions"
         assert request.headers["authorization"] == "Bearer test-openrouter-secret"
         body = json.loads(request.content)
-        assert body["model"] == "google/gemma-4-31b-it:free"
+        assert body["model"] == "nvidia/nemotron-3.5-lightning:free"
         assert body["provider"]["max_price"] == {"prompt": 0, "completion": 0, "request": 0}
         assert body["provider"]["allow_fallbacks"] is False
         assert "models" not in body

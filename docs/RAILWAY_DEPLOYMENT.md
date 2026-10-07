@@ -1,7 +1,7 @@
 # Railway deployment
 
 The backend runs FastEmbed on CPU, retrieves 384-dimensional BGE vectors through
-Supabase RPC, and generates answers with free Gemma through OpenRouter. All chat
+Supabase RPC, and generates answers with free NVIDIA Nemotron through OpenRouter. All chat
 history and vectors remain in Supabase. Local mode continues to use Ollama.
 Cloud mode rejects paid model IDs and other cloud providers before generation.
 Each request caps prompt, completion, and per-request prices at zero and disables
@@ -25,7 +25,7 @@ existing `backend/.env` during local tests:
 APP_ENV=cloud
 CLOUD_LLM_PROVIDER=openrouter
 OPENROUTER_API_KEY=<your OpenRouter key>
-OPENROUTER_MODEL=google/gemma-4-31b-it:free
+OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free
 SUPABASE_URL=https://<your-project-ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<your backend service-role key>
 CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
@@ -87,16 +87,19 @@ Create a backend service from your GitHub repository with these settings:
 
 | Setting | Value |
 | --- | --- |
-| Root Directory | `/` (repository root) |
-| Config File | `/railway.toml` |
+| Root Directory | `/backend` |
 | Builder | Railpack |
+| Build Command | `python prepare_cloud_model.py` |
+| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
 | Healthcheck Path | `/health` |
-| Python | `3.13`, from the root `.python-version` |
+| Healthcheck Timeout | `300` |
+| Python | Set `RAILPACK_PYTHON_VERSION=3.13` in Variables |
 
-The root Python manifest solves language detection without selecting the
-frontend. Leave Railway's custom build/start overrides blank so `railway.toml`
-controls them. Its build installs dependencies and downloads the model. Its
-start command changes into `backend/` and binds Uvicorn to `0.0.0.0:$PORT`.
+Railpack automatically installs `backend/requirements.txt` before the custom
+build command downloads the model. With `/backend`, all commands run directly
+inside the backend, without `backend/` path prefixes or a `cd backend` step.
+Set these commands in the Railway dashboard; new services do not use `railway.toml`.
+The start command runs directly inside the backend root and binds to `0.0.0.0:$PORT`.
 Raw transcripts, the large ZIP archive, virtual environments, and generated
 frontend files are excluded by `.gitignore`; the files remain available locally.
 
@@ -109,10 +112,11 @@ DATABASE_URL=postgresql+asyncpg://<user>:<url-encoded-password>@<supabase-sessio
 SUPABASE_URL=https://<your-project-ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<your backend service-role key>
 OPENROUTER_API_KEY=<your OpenRouter key>
-OPENROUTER_MODEL=google/gemma-4-31b-it:free
+OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free
 CORS_ORIGINS=["https://<your-frontend-domain>"]
 FASTEMBED_THREADS=2
 FASTEMBED_LOCAL_FILES_ONLY=true
+RAILPACK_PYTHON_VERSION=3.13
 CREATE_DB_ON_STARTUP=false
 RAG_TOP_K=5
 RAG_MIN_COSINE_SIMILARITY=0.30
