@@ -1,5 +1,6 @@
 # Runtime dependencies for the FastAPI backend and transcript ingestion pipeline.
 # Development tools are declared in pyproject.toml under the `dev` extra.
+#Libraries
 asyncpg>=0.29.0
 fastembed>=0.8.1,<0.9
 fastapi[standard]>=0.115.0
