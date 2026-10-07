@@ -1,0 +1,25 @@
+Metadata-Version: 2.4
+Name: lenny-growth-assistant-backend
+Version: 0.1.0
+Summary: FastAPI backend for The Lenny Growth Assistant.
+Requires-Python: >=3.11
+Requires-Dist: anthropic>=0.39.0
+Requires-Dist: asyncpg>=0.29.0
+Requires-Dist: fastapi[standard]>=0.115.0
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: langchain-core>=0.3.0
+Requires-Dist: langchain-ollama>=0.2.0
+Requires-Dist: langchain-postgres>=0.0.12
+Requires-Dist: langchain-text-splitters>=0.3.0
+Requires-Dist: tiktoken>=0.7.0
+Requires-Dist: psycopg[binary]>=3.2.0
+Requires-Dist: pydantic>=2.9.0
+Requires-Dist: pydantic-settings>=2.5.0
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: pyyaml>=6.0.2
+Requires-Dist: sqlalchemy[asyncio]>=2.0.35
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.24.0; extra == "dev"
+Requires-Dist: ruff>=0.6.0; extra == "dev"
+Requires-Dist: mypy>=1.11.0; extra == "dev"

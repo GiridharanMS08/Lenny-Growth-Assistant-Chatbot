@@ -1,0 +1,2 @@
+# Railway detects Python from this root manifest.
+-r backend/requirements.txt

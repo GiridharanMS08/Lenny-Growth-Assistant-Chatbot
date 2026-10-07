@@ -1,0 +1,27 @@
+
+> lenny-growth-assistant-frontend@0.1.0 dev
+> next dev --hostname 127.0.0.1 --port 3000
+
+   ▲ Next.js 15.5.27
+   - Local:        http://127.0.0.1:3000
+   - Network:      http://127.0.0.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 2.9s
+ ○ Compiling / ...
+ ✓ Compiled / in 4.3s (938 modules)
+ GET / 200 in 4771ms
+ GET / 200 in 1429ms
+ GET / 200 in 297ms
+ GET / 200 in 246ms
+ GET / 200 in 243ms
+ GET / 200 in 706ms
+ GET / 200 in 502ms
+ GET / 200 in 246ms
+ GET / 200 in 192ms
+ GET / 200 in 210ms
+ GET / 200 in 216ms
+ GET / 200 in 270ms
+ ✓ Compiled in 2.4s (938 modules)
+ ✓ Compiled in 698ms (938 modules)
+ ✓ Compiled in 3s (938 modules)

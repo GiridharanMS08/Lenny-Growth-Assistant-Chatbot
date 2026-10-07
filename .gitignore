@@ -1,0 +1,21 @@
+data/embedding-repair-backups/
+data/database-backups/
+backend/.env
+backend/.env.cloud
+**/.env*
+data/openrouter.txt
+backend/.venv-cloud/
+backend/.model-cache/
+backend/requirements-cloud.lock
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+backend/pytest-cache-files-*/
+backend/*.log
+frontend/node_modules/
+frontend/.next/
+frontend/*.tsbuildinfo
+# Transcripts are ingested locally; the deployed API reads Supabase.
+data/lennys-podcast-transcripts/
+lenny_podcast/
+lenny_podcast.zip

@@ -1,0 +1,54 @@
+[project]
+name = "lenny-growth-assistant-backend"
+version = "0.1.0"
+description = "FastAPI backend for The Lenny Growth Assistant."
+requires-python = ">=3.11"
+dependencies = [
+    "asyncpg>=0.29.0",
+    "fastembed>=0.8.1,<0.9",
+    "fastapi[standard]>=0.115.0",
+    "httpx>=0.27.0",
+    "groq>=0.11.0,<2",
+    "langchain-core>=0.3.0",
+    "langchain-ollama>=0.2.0",
+    "langchain-postgres>=0.0.12",
+    "langchain-text-splitters>=0.3.0",
+    "tiktoken>=0.7.0",
+    "psycopg[binary]>=3.2.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "python-dotenv>=1.0.1",
+    "pyyaml>=6.0.2",
+    "sqlalchemy[asyncio]>=2.0.35",
+    "supabase>=2.10.0,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = [
+    "B008", # FastAPI dependency declarations intentionally use Depends in signatures.
+    "E501", # Long prompts and API error declarations are clearer as single logical lines.
+]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
