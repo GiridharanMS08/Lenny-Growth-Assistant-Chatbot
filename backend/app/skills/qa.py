@@ -35,7 +35,11 @@ async def run_qa_skill(llm_client: BaseLLMClient, user_message: str) -> str:
                     )
                 ],
                 temperature=0.1,
-                max_tokens=500,
+                max_tokens=(
+                    settings.cloud_qa_max_tokens
+                    if settings.app_env == "cloud" and llm_client.provider == "cloud"
+                    else 500
+                ),
             )
         )
     ).content

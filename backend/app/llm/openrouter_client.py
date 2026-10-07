@@ -55,25 +55,30 @@ class OpenRouterClient(BaseLLMClient):
         self._timeout_seconds = settings.llm_timeout_seconds
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
+        payload: dict[str, object] = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": request.system_prompt},
+                *[{"role": item.role, "content": item.content} for item in request.messages if item.role != "system"],
+            ],
+            "temperature": request.temperature,
+            "max_tokens": request.max_tokens,
+            "stream": False,
+            "provider": {
+                "max_price": {"prompt": 0, "completion": 0, "request": 0},
+                "allow_fallbacks": False,
+            },
+        }
+        if self.model == "nvidia/nemotron-3.5-lightning:free":
+            # This endpoint supports optional reasoning. Disable it so hidden
+            # thinking does not consume the budget before an answer is produced.
+            payload["reasoning"] = {"enabled": False}
         try:
             async with httpx.AsyncClient(timeout=self._timeout_seconds, trust_env=False) as client:
                 response = await client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers={"Authorization": f"Bearer {self._api_key}"},
-                    json={
-                        "model": self.model,
-                        "messages": [
-                            {"role": "system", "content": request.system_prompt},
-                            *[{"role": item.role, "content": item.content} for item in request.messages if item.role != "system"],
-                        ],
-                        "temperature": request.temperature,
-                        "max_tokens": request.max_tokens,
-                        "stream": False,
-                        "provider": {
-                            "max_price": {"prompt": 0, "completion": 0, "request": 0},
-                            "allow_fallbacks": False,
-                        },
-                    },
+                    json=payload,
                 )
                 response.raise_for_status()
         except httpx.RequestError as exc:

@@ -26,6 +26,7 @@ APP_ENV=cloud
 CLOUD_LLM_PROVIDER=openrouter
 OPENROUTER_API_KEY=<your OpenRouter key>
 OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free
+CLOUD_QA_MAX_TOKENS=1500
 SUPABASE_URL=https://<your-project-ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<your backend service-role key>
 CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
@@ -113,6 +114,7 @@ SUPABASE_URL=https://<your-project-ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<your backend service-role key>
 OPENROUTER_API_KEY=<your OpenRouter key>
 OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free
+CLOUD_QA_MAX_TOKENS=1500
 CORS_ORIGINS=["https://<your-frontend-domain>"]
 FASTEMBED_THREADS=2
 FASTEMBED_LOCAL_FILES_ONLY=true
@@ -138,6 +140,9 @@ Ollama as disabled. Startup validates variables and the cached model;
 `/health` itself does not prove Supabase connectivity or free endpoint availability.
 Free models have usage quotas and may be temporarily unavailable. API keys are
 still required for authentication, but the selected model has zero token pricing.
+Nemotron Lightning's optional reasoning is disabled to keep hidden thinking
+from exhausting the answer budget. Cloud Q&A uses `CLOUD_QA_MAX_TOKENS` (default
+1500, range 256–8192); local and legacy Q&A keep their original 500-token limit.
 Railway hosting and Supabase plans are separate from model API costs.
 
 Current checks and provider references:

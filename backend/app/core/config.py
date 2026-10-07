@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     openrouter_model: str = Field(
         default="nvidia/nemotron-3.5-lightning:free", validation_alias="OPENROUTER_MODEL"
     )
+    cloud_qa_max_tokens: int = Field(
+        default=1500, validation_alias="CLOUD_QA_MAX_TOKENS", ge=256, le=8192
+    )
 
     cloud_provider: Literal["gemini", "openai"] = Field(
         default="gemini", validation_alias="CLOUD_PROVIDER"
