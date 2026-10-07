@@ -1,6 +1,6 @@
 """Install the isolated cloud schema and ensure chat tables exist.
 
-Requires --apply to write; otherwise only inspects the existing schema.
+Requires ---apply to write; otherwise only inspects the existing schema.
 """
 
 from __future__ import annotations
