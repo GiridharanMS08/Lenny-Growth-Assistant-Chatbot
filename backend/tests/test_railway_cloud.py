@@ -5,9 +5,6 @@ import json
 import groq
 import httpx
 import pytest
-import supabase
-from fastapi.testclient import TestClient
-
 from app import main
 from app.api.routes import models
 from app.core.config import Settings
@@ -16,6 +13,9 @@ from app.llm.base import LLMMessage, LLMRequest
 from app.llm.groq_client import GroqClient
 from app.llm.openrouter_client import OpenRouterClient
 from app.rag import cloud
+from fastapi.testclient import TestClient
+
+import supabase
 
 
 def cloud_settings(**overrides) -> Settings:
@@ -115,15 +115,33 @@ async def test_openrouter_free_model_and_sanitized_errors(monkeypatch, status: i
             assert "No paid model was tried" in str(caught.value)
 
 
-@pytest.mark.parametrize("model", ["meta-llama/llama-3.3-70b-instruct", "openrouter/auto"])
-def test_paid_models_rejected_before_network_call(model):
-    with pytest.raises(ConfigurationError, match="Paid cloud models are disabled"):
+@pytest.mark.parametrize("model", ["deepseek-4.1-flash", "openrouter/auto", "", "deepseek/bad model"])
+def test_invalid_or_automatic_models_rejected_before_network_call(model):
+    with pytest.raises(ConfigurationError):
         OpenRouterClient(cloud_settings(OPENROUTER_MODEL=model))
 
 
 def test_unverified_cloud_provider_blocked():
-    with pytest.raises(ConfigurationError, match="free-only"):
-        cloud_settings(CLOUD_LLM_PROVIDER="groq").validate_free_cloud_model()
+    with pytest.raises(ConfigurationError, match="CLOUD_LLM_PROVIDER=openrouter"):
+        cloud_settings(CLOUD_LLM_PROVIDER="groq").validate_cloud_model()
+
+
+@pytest.mark.asyncio
+async def test_paid_model_uses_selected_id_without_zero_price_cap(monkeypatch):
+    original = httpx.AsyncClient
+
+    def handler(request):
+        body = json.loads(request.content)
+        assert body["model"] == "deepseek/deepseek-v4.1-flash"
+        assert body["provider"] == {"allow_fallbacks": False}
+        assert body["reasoning"] == {"enabled": False}
+        assert "models" not in body
+        return httpx.Response(200, json={"choices": [{"message": {"content": "Answer"}, "finish_reason": "stop"}]})
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs))
+    settings = cloud_settings(OPENROUTER_MODEL="deepseek/deepseek-v4.1-flash")
+    settings.validate_cloud_configuration()
+    assert (await OpenRouterClient(settings).complete(LLMRequest(system_prompt="Test"))).content == "Answer"
 
 
 @pytest.mark.asyncio

@@ -6,7 +6,7 @@ Product builders, founders, growth leaders, and operators frequently rely on Len
 
 The Lenny Growth Assistant is a full-stack, AI-powered conversational application that ingests Lenny's Podcast transcripts, answers user questions using only that transcript corpus, and generates high-quality content or renderable artifacts on demand.
 
-The assistant must be reliable, source-grounded, extensible, and lightweight enough to run on a local development machine with exactly 8 GB of RAM.
+The assistant must be reliable, source-grounded, extensible, and able to run on a local development machine with at least 8 GB of RAM.
 
 ## 2. Goals
 
@@ -146,7 +146,7 @@ A product/growth operator who wants fast, grounded answers from Lenny's Podcast 
 
 ### Performance
 
-- Designed for an 8 GB RAM machine.
+- Designed for a machine with at least 8 GB RAM.
 - No Docker.
 - Remote Supabase database instead of local PostgreSQL.
 - Local model limited to Ollama `llama3.2:3b`.
@@ -166,12 +166,12 @@ A product/growth operator who wants fast, grounded answers from Lenny's Podcast 
 - App clearly refuses when transcript evidence is insufficient.
 - Cloud/local model toggle works with understandable status indicators.
 - Artifact panel renders Markdown and sandboxed HTML/CSS correctly.
-- App can run locally without Docker on an 8 GB RAM machine.
+- App can run locally without Docker on a machine with at least 8 GB RAM.
 - README enables setup by a reviewer in under 20 minutes, excluding transcript ingestion time.
 
 ## 9. Constraints
 
-- Local machine has exactly 8 GB RAM.
+- Local machine requires at least 8 GB RAM.
 - Docker is prohibited.
 - Database is Supabase Cloud PostgreSQL with pgvector.
 - Local LLM is Ollama `llama3.2:3b`.

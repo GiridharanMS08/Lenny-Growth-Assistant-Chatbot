@@ -12,7 +12,7 @@ It consists of:
 - **Next.js frontend** with Tailwind CSS and shadcn/ui for a polished chat and artifact experience.
 - **Standalone ingestion script** to clone/pull Lenny's Podcast transcripts, chunk them, embed them, and store them in Supabase pgvector.
 
-Docker is intentionally skipped. The app is designed for a local machine with exactly 8 GB RAM and uses Supabase Cloud instead of a local database container.
+Docker is intentionally skipped. The app requires a local machine with at least 8 GB RAM and uses Supabase Cloud instead of a local database container.
 
 ## 2. High-Level Data Flow
 
@@ -290,7 +290,7 @@ Target settings:
 
 The ingestion command uses the `cl100k_base` tokenizer through `tiktoken` and keeps a
 200-token overlap. It processes at most 32 chunks per embedding/write batch to keep memory
-bounded on the 8 GB machine.
+bounded on machines with at least 8 GB RAM.
 
 ### 6.4 Embedding and Storage
 
@@ -302,7 +302,7 @@ Run from the repository root with `python scripts/ingest_transcripts.py`; it loa
 - Validate `DATABASE_URL`.
 - Validate embedding provider settings.
 - Avoid loading the entire corpus into memory at once.
-- Process files incrementally/batched to respect the 8 GB RAM limit.
+- Process files incrementally/batched to support machines with at least 8 GB RAM.
 - Upsert deterministic chunk IDs so repeated runs do not duplicate unchanged chunks.
 - Never clear the entire vector collection during routine ingestion.
 
@@ -369,7 +369,7 @@ Local strategy:
 - Model: `llama3.2:3b`.
 - Base URL: `http://localhost:11434`.
 - Handles connection refused/timeouts.
-- Avoids large context windows or heavy models due to 8 GB RAM.
+- Uses conservative defaults for machines with at least 8 GB RAM; larger models and context windows may require more memory.
 
 ### 8.4 Factory Selection
 
@@ -459,7 +459,7 @@ Docker is explicitly not used in this project.
 
 Reasons:
 
-- User machine has exactly 8 GB RAM.
+- User machine requires at least 8 GB RAM.
 - Local Dockerized databases and services would consume unnecessary memory.
 - Supabase Cloud provides the required PostgreSQL and pgvector capabilities remotely.
 - Ollama local model selection defaults to `llama3.2:3b` to keep memory usage practical.

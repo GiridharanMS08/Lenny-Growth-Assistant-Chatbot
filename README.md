@@ -8,7 +8,7 @@ A conversational workspace for asking questions about Lenny's Podcast transcript
 - `scripts/ingest_transcripts.py`: clones/pulls the transcript source, enriches metadata, creates token-aware chunks, and stores embeddings in Supabase pgvector.
 - `frontend/`: Next.js application with a resizable chat workspace and sandboxed artifact preview.
 
-The app intentionally has no Docker configuration. Supabase Cloud hosts PostgreSQL and pgvector; Ollama uses `llama3.2:3b` locally by default to stay practical on an 8 GB machine.
+The app intentionally has no Docker configuration. Supabase Cloud hosts PostgreSQL and pgvector; Ollama uses `llama3.2:3b` locally by default. Local development requires at least 8 GB RAM.
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@ The app intentionally has no Docker configuration. Supabase Cloud hosts PostgreS
 - Node.js 20+
 - A Supabase project with the `vector` extension enabled
 - Ollama, with `llama3.2:3b` and `nomic-embed-text` pulled
-- An OpenRouter API key for the free Railway cloud mode (local Ollama needs no model API key)
+- An OpenRouter API key for Railway cloud mode (local Ollama needs no model API key)
 
 ```powershell
 ollama pull llama3.2:3b
@@ -97,11 +97,13 @@ Create a Gemini key in [Google AI Studio](https://aistudio.google.com/apikey) or
 
 The adapters use [Gemini generateContent](https://ai.google.dev/api/generate-content) and [OpenAI Responses](https://developers.openai.com/api/docs/guides/text) over the existing `httpx` dependency. No Anthropic SDK is required. Secrets stay on the backend, and request errors identify missing keys, unavailable models, and quota limits.
 
-### Railway cloud RAG (FastEmbed + free hosted model)
+### Railway cloud RAG (FastEmbed + hosted model)
 
 The original Ollama ingestion script and collection remain unchanged. For Railway, use the dedicated `transcript_chunks_cloud` table because `BAAI/bge-small-en-v1.5` produces 384-dimensional vectors and must never be mixed with the local Ollama embeddings.
 
-Follow [the Railway deployment guide](docs/RAILWAY_DEPLOYMENT.md) for the exact commands and variables. `APP_ENV=cloud` uses `nvidia/nemotron-3.5-lightning:free` through OpenRouter. Cloud generation requires a `:free` model, caps prompt/completion/request prices at zero, and disables provider fallback. Paid model IDs and other cloud providers are rejected before generation. Your OpenRouter key is used for authentication; free endpoint quotas and availability still apply. Groq and other legacy adapters remain in the codebase but are not selected by this free-only Railway path.
+Follow [the Railway deployment guide](docs/RAILWAY_DEPLOYMENT.md) for the exact commands and variables. `APP_ENV=cloud` uses OpenRouter and supports explicitly selected free or paid models. The default is `nvidia/nemotron-3.5-lightning:free`; set `OPENROUTER_MODEL` to a full catalog ID such as `deepseek/deepseek-v4.1-flash` to use a paid model with account credits. Free selections retain zero-price filters. Provider fallback and automatic model routing are disabled, so the application never silently switches from a free model to a paid one. Groq and other legacy adapters are not selected by this Railway path.
+
+Transcript Q&A uses cosine retrieval, removes duplicate passages, and allows evidence from multiple episodes. Answers display exact excerpts verified against the context and cite only the passages used. If no retrieved passage supports the question, the response says it could not find a supportive transcript source. Model or API errors are reported separately from missing evidence.
 
 The root `requirements.txt` enables Railway's Python detection. Railway builds from the repository root, downloads the embedding model into the image, and starts the backend. Runtime model loading uses that cache with `FASTEMBED_LOCAL_FILES_ONLY=true`. Cloud startup checks required variables and warms the CPU model before accepting traffic.
 

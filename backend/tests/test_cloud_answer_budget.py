@@ -4,13 +4,12 @@ import json
 
 import httpx
 import pytest
-from pydantic import ValidationError
-
 from app.core.config import Settings
 from app.llm.base import BaseLLMClient, LLMMessage, LLMProvider, LLMRequest, LLMResponse
 from app.llm.openrouter_client import OpenRouterClient
 from app.rag.retriever import RetrievedChunk
 from app.skills import qa
+from pydantic import ValidationError
 
 
 class RecordingClient(BaseLLMClient):
@@ -21,7 +20,7 @@ class RecordingClient(BaseLLMClient):
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
         self.requests.append(request)
-        return LLMResponse(provider=self.provider, model=self.model, content="Evidence-based answer")
+        return LLMResponse(provider=self.provider, model=self.model, content=json.dumps({"excerpts": [{"chunk": 1, "quote": "Choose an activation experience correlated with long-term retention."}]}))
 
 
 @pytest.mark.asyncio
@@ -30,9 +29,9 @@ class RecordingClient(BaseLLMClient):
     [
         ("cloud", "cloud", 1500, 1500),
         ("cloud", "cloud", 2500, 2500),
-        ("local", "local", 1500, 500),
-        ("local", "cloud", 1500, 500),
-        ("cloud", "local", 1500, 500),
+        ("local", "local", 1500, 1000),
+        ("local", "cloud", 1500, 1000),
+        ("cloud", "local", 1500, 1000),
     ],
 )
 async def test_qa_budget_changes_only_for_cloud_mode(monkeypatch, environment, provider, budget, expected):
@@ -41,7 +40,7 @@ async def test_qa_budget_changes_only_for_cloud_mode(monkeypatch, environment, p
 
     async def retrieve(*args, **kwargs):
         return [RetrievedChunk(
-            content="Activation evidence",
+            content="Choose an activation experience correlated with long-term retention.",
             metadata={"episode_title": "Activation Deep Dive", "source_path": "activation.md"},
             cosine_similarity=0.9,
         )]
@@ -49,11 +48,11 @@ async def test_qa_budget_changes_only_for_cloud_mode(monkeypatch, environment, p
     monkeypatch.setattr(qa, "retrieve_relevant_chunks", retrieve)
     client = RecordingClient(provider)
     answer = await qa.run_qa_skill(client, "How can I improve activation?")
-    assert "Evidence-based answer" in answer
+    assert "correlated with long-term retention" in answer
     assert "**Sources**" in answer
     assert "**Activation Deep Dive** — `activation.md`" in answer
     assert client.requests[0].max_tokens == expected
-    assert "Activation evidence" in client.requests[0].messages[0].content
+    assert "correlated with long-term retention" in client.requests[0].messages[0].content
 
 
 @pytest.mark.parametrize("budget", [0, 255, 8193])

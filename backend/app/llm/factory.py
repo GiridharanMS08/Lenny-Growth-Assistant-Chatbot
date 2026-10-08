@@ -14,7 +14,7 @@ def get_llm_client(provider: LLMProvider) -> BaseLLMClient:
 
     if provider == "cloud":
         if settings.app_env == "cloud":
-            settings.validate_free_cloud_model()
+            settings.validate_cloud_model()
             return OpenRouterClient(settings)
         if settings.cloud_provider == "gemini":
             return GeminiClient(settings)

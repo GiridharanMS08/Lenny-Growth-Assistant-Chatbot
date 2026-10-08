@@ -1,4 +1,4 @@
-"""OpenAI-compatible free-model chat API with zero-price routing."""
+"""OpenRouter chat for explicitly selected free or paid models."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from app.core.errors import ConfigurationError, LLMProviderError, LLMProviderUna
 from app.llm.base import BaseLLMClient, LLMRequest, LLMResponse
 
 
-def _rate_limit_message(response: httpx.Response, error: dict[str, object]) -> str:
+def _rate_limit_message(response: httpx.Response, error: dict[str, object], *, free: bool = True) -> str:
     """Classify 429s without exposing upstream messages, credentials, or prompts."""
     metadata = error.get("metadata")
     metadata = metadata if isinstance(metadata, dict) else {}
@@ -22,17 +22,19 @@ def _rate_limit_message(response: httpx.Response, error: dict[str, object]) -> s
         or "rate-limited upstream" in detail
     ):
         message = (
-            "The free model's provider is temporarily rate-limited or overloaded. "
+            "The model's provider is temporarily rate-limited or overloaded. "
             "This is a provider-capacity limit, not your daily account quota. "
-            "Retry later or choose another :free model."
+            "Retry later or choose another model."
         )
     elif "daily" in source or "free-models-per-day" in detail:
-        message = "OpenRouter's daily free-request limit is reached. Wait for the daily quota to reset."
+        quota = "free-request" if free else "request"
+        message = f"OpenRouter's daily {quota} limit is reached. Wait for the daily quota to reset."
     elif "minute" in source or "free-models-per-min" in detail:
-        message = "OpenRouter's per-minute free-request limit is reached. Wait before retrying."
+        quota = "free-request" if free else "request"
+        message = f"OpenRouter's per-minute {quota} limit is reached. Wait before retrying."
     else:
         message = (
-            "OpenRouter rate-limited the free request. The response did not identify "
+            "OpenRouter rate-limited the request. The response did not identify "
             "an account or provider limit; your daily quota may still be available. Retry later."
         )
     retry_after = response.headers.get("retry-after", "")
@@ -48,13 +50,17 @@ class OpenRouterClient(BaseLLMClient):
 
     def __init__(self, settings: Settings) -> None:
         if not settings.openrouter_api_key.strip():
-            raise ConfigurationError("OPENROUTER_API_KEY is required for OpenRouter's free models.")
-        settings.validate_free_cloud_model()
+            raise ConfigurationError("OPENROUTER_API_KEY is required for OpenRouter.")
+        settings.validate_cloud_model()
         self.model = settings.openrouter_model.strip()
+        self._free = self.model.endswith(":free")
         self._api_key = settings.openrouter_api_key.strip()
         self._timeout_seconds = settings.llm_timeout_seconds
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
+        provider: dict[str, object] = {"allow_fallbacks": False}
+        if self._free:
+            provider["max_price"] = {"prompt": 0, "completion": 0, "request": 0}
         payload: dict[str, object] = {
             "model": self.model,
             "messages": [
@@ -64,13 +70,10 @@ class OpenRouterClient(BaseLLMClient):
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
             "stream": False,
-            "provider": {
-                "max_price": {"prompt": 0, "completion": 0, "request": 0},
-                "allow_fallbacks": False,
-            },
+            "provider": provider,
         }
-        if self.model == "nvidia/nemotron-3.5-lightning:free":
-            # This endpoint supports optional reasoning. Disable it so hidden
+        if self.model in {"nvidia/nemotron-3.5-lightning:free", "deepseek/deepseek-v4.1-flash"}:
+            # These endpoints support optional reasoning. Disable it so hidden
             # thinking does not consume the budget before an answer is produced.
             payload["reasoning"] = {"enabled": False}
         try:
@@ -93,15 +96,17 @@ class OpenRouterClient(BaseLLMClient):
             error = error if isinstance(error, dict) else {}
             error_message = str(error.get("message", "")).lower()
             if status == 403 and "key limit exceeded" in error_message:
-                message = "OpenRouter blocked the free-model request with a key-limit restriction. No paid model was tried."
+                message = "OpenRouter blocked the request with a key-limit restriction."
+                if self._free:
+                    message += " No paid model was tried."
             elif status in {401, 403}:
                 message = "OpenRouter rejected the API key or its permissions."
             elif status == 402:
-                message = "OpenRouter rejected the free-model request. Paid models are disabled."
+                message = "OpenRouter requires sufficient account credits for the selected model. Check your account balance and key spending limit."
             elif status == 429:
-                message = _rate_limit_message(exc.response, error)
+                message = _rate_limit_message(exc.response, error, free=self._free)
             elif status == 404:
-                message = "The selected free model is unavailable. Choose an available :free model; paid fallback is disabled."
+                message = "The selected model is unavailable. Check OPENROUTER_MODEL against the OpenRouter model catalog."
             else:
                 message = f"OpenRouter returned HTTP {status}. Check OPENROUTER_MODEL and API access."
             raise LLMProviderError(message) from exc

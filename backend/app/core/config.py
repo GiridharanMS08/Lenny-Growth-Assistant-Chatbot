@@ -168,18 +168,21 @@ class Settings(BaseSettings):
     def is_cloud_rag_configured(self) -> bool:
         return bool(self.supabase_url.strip() and self.supabase_service_role_key.strip())
 
-    def validate_free_cloud_model(self) -> None:
+    def validate_cloud_model(self) -> None:
         from app.core.errors import ConfigurationError
 
         if self.cloud_llm_provider != "openrouter":
-            raise ConfigurationError("Cloud answers are free-only. Set CLOUD_LLM_PROVIDER=openrouter and select a :free model.")
-        if not self.openrouter_model.strip().endswith(":free"):
-            raise ConfigurationError("Paid cloud models are disabled. OPENROUTER_MODEL must end with :free.")
+            raise ConfigurationError("Set CLOUD_LLM_PROVIDER=openrouter for cloud answers.")
+        model = self.openrouter_model.strip()
+        if not model or "/" not in model or any(char.isspace() for char in model):
+            raise ConfigurationError("OPENROUTER_MODEL must be a full OpenRouter model ID: provider/model, optionally ending in :free.")
+        if model.startswith("openrouter/"):
+            raise ConfigurationError("Select an explicit provider/model instead of an automatic model router.")
 
     def validate_cloud_configuration(self) -> None:
         from app.core.errors import ConfigurationError
 
-        self.validate_free_cloud_model()
+        self.validate_cloud_model()
         required = {
             "DATABASE_URL": self.database_url,
             "SUPABASE_URL": self.supabase_url,

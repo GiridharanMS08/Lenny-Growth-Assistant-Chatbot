@@ -1,4 +1,4 @@
-"""Exercise the real cloud API, including embeddings, Supabase RPC, and a free model.
+"""Exercise the real cloud API, including embeddings, Supabase RPC, and the selected model.
 
 A full check persists one session and chat in Supabase, just as the frontend does.
 """
@@ -25,6 +25,7 @@ from app.core.errors import (  # noqa: E402
 )
 from app.llm.base import LLMMessage, LLMRequest  # noqa: E402
 from app.llm.factory import get_llm_client  # noqa: E402
+from app.skills.qa import NO_EVIDENCE  # noqa: E402
 
 
 def check(settings: Settings, question: str) -> None:
@@ -46,7 +47,7 @@ def check(settings: Settings, question: str) -> None:
         if response.status_code != 200:
             raise RuntimeError(f"Cloud chat returned HTTP {response.status_code}; inspect the API with private credentials.")
         content = response.json()["message"]["content"]
-        if "I don't have enough transcript evidence" in content:
+        if content == NO_EVIDENCE or "I don't have enough transcript evidence" in content:
             raise RuntimeError("No matching transcript context. Run cloud ingestion and check the similarity threshold.")
         print(f"FastEmbed -> Supabase RPC -> {settings.cloud_llm_provider} -> stored chat: OK.")
         print(content)

@@ -4,6 +4,8 @@
 
 The application should feel like a polished AI workspace rather than a basic demo.
 
+Local development requires at least 8 GB RAM.
+
 Core principles:
 
 - **Grounded and trustworthy:** The UI should make it clear when answers are transcript-based.

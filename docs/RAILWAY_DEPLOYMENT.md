@@ -1,11 +1,13 @@
 # Railway deployment
 
 The backend runs FastEmbed on CPU, retrieves 384-dimensional BGE vectors through
-Supabase RPC, and generates answers with free NVIDIA Nemotron through OpenRouter. All chat
+Supabase RPC, and generates answers with the selected OpenRouter model. All chat
 history and vectors remain in Supabase. Local mode continues to use Ollama.
-Cloud mode rejects paid model IDs and other cloud providers before generation.
-Each request caps prompt, completion, and per-request prices at zero and disables
-provider fallback. Free endpoint failures return an error; no paid model is tried.
+Cloud mode accepts explicit free or paid model IDs in `OPENROUTER_MODEL`.
+The default is free NVIDIA Nemotron. Free selections cap prompt, completion,
+and per-request prices at zero. Paid selections require account credits.
+Provider fallback and automatic model routing remain disabled: failures never
+silently switch the selected model to a different, potentially paid model.
 
 ## Test locally
 
@@ -27,6 +29,7 @@ CLOUD_LLM_PROVIDER=openrouter
 OPENROUTER_API_KEY=<your OpenRouter key>
 OPENROUTER_MODEL=nvidia/nemotron-3.5-lightning:free
 CLOUD_QA_MAX_TOKENS=1500
+RAG_CONTEXT_MAX_CHARS=12000
 SUPABASE_URL=https://<your-project-ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<your backend service-role key>
 CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
@@ -53,7 +56,7 @@ backend/.venv-cloud/Scripts/python.exe scripts/check_cloud_deployment.py
 ```
 
 The full check creates one Supabase chat session and tests CPU embeddings,
-retrieval RPC, the free model, and message persistence. An empty retrieval result
+retrieval RPC, the selected model, and message persistence. An empty retrieval result
 is a failure, even if `/health` succeeds. Questions must match the sample data;
 use `--question "<a question about the ingested episode>"` if necessary.
 
@@ -122,7 +125,13 @@ RAILPACK_PYTHON_VERSION=3.13
 CREATE_DB_ON_STARTUP=false
 RAG_TOP_K=5
 RAG_MIN_COSINE_SIMILARITY=0.30
+RAG_CONTEXT_MAX_CHARS=12000
 ```
+
+For a premium model, replace `OPENROUTER_MODEL` with its full OpenRouter catalog
+ID, for example `deepseek/deepseek-v4.1-flash`. A short name such as
+`deepseek-4.1-flash` is not a valid ID. Check account credits and key spending limits
+before selecting a paid model; the application does not purchase credits.
 
 Use the Supabase session pooler on port 5432 with the asyncpg URL prefix for chat
 storage. No Railway database or persistent volume is needed: vectors and chats
@@ -135,15 +144,22 @@ Rebuild the frontend after changing that variable. Use its actual HTTPS origin
 in backend `CORS_ORIGINS`, with no trailing slash or wildcard.
 
 After deployment, verify `/health`, `/api/models`, create a session, and send a
-transcript question. `/api/models` should show `openrouter`, the `:free` model, and local
+transcript question. `/api/models` should show `openrouter`, the selected model, and local
 Ollama as disabled. Startup validates variables and the cached model;
-`/health` itself does not prove Supabase connectivity or free endpoint availability.
+`/health` itself does not prove Supabase connectivity or model endpoint availability.
 Free models have usage quotas and may be temporarily unavailable. API keys are
-still required for authentication, but the selected model has zero token pricing.
-Nemotron Lightning's optional reasoning is disabled to keep hidden thinking
+required for both free and paid models.
+Nemotron Lightning and DeepSeek V4.1 Flash optional reasoning is disabled to keep hidden thinking
 from exhausting the answer budget. Cloud Q&A uses `CLOUD_QA_MAX_TOKENS` (default
-1500, range 256–8192); local and legacy Q&A keep their original 500-token limit.
+1500, range 256–8192); local and legacy Q&A use a 1000-token excerpt budget.
 Railway hosting and Supabase plans are separate from model API costs.
+
+Q&A selects up to three direct excerpts, verifies each against the actual context,
+and lists only the sources used. The cosine retriever fetches extra candidates,
+removes exact duplicates, and leaves room for multiple episodes. Empty evidence
+produces a no-supportive-source response; invalid model output is retried once
+and reported as an error if it still cannot be verified. This reduces invented
+claims but does not guarantee that a model will always select the best evidence.
 
 Current checks and provider references:
 

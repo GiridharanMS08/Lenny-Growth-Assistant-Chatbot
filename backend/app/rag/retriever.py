@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import math
+import re
+from collections import Counter
 from dataclasses import dataclass
 from typing import Any
-
-from langchain_postgres.vectorstores import DistanceStrategy
 
 from app.core.config import get_settings
 from app.core.errors import ConfigurationError
@@ -46,6 +47,7 @@ def _similarity_search_sync(query: str, top_k: int, provider: str) -> list[Retri
 
     try:
         from langchain_postgres import PGVector
+        from langchain_postgres.vectorstores import DistanceStrategy
     except ImportError as exc:  # pragma: no cover - dependency setup guard
         raise ConfigurationError(
             "langchain-postgres is not installed. Run `pip install -e .` in backend/."
@@ -83,7 +85,58 @@ async def retrieve_relevant_chunks(
     resolved_top_k = settings.rag_top_k if top_k is None else top_k
     if not 1 <= resolved_top_k <= 20:
         raise ValueError("top_k must be between 1 and 20.")
-    return await asyncio.to_thread(_similarity_search_sync, query, resolved_top_k, provider)
+    # The podcast name is common to every document and can dominate short queries.
+    search_query = re.sub(
+        r"^\s*what\s+(?:does|did)\s+lenny['\u2019]s\s+podcast\s+say\s+about\s+",
+        "", query, flags=re.IGNORECASE,
+    ).strip().rstrip("?").strip()
+    candidates = await asyncio.to_thread(
+        _similarity_search_sync, search_query or query.strip(), min(20, max(12, resolved_top_k * 3)), provider
+    )
+    return select_chunks(candidates, resolved_top_k)
+
+
+def select_chunks(candidates: list[RetrievedChunk], top_k: int) -> list[RetrievedChunk]:
+    """Keep cosine ranking, remove duplicates, and leave room for multiple episodes."""
+    ranked = sorted(
+        (chunk for chunk in candidates if chunk.content.strip() and math.isfinite(chunk.cosine_similarity)),
+        key=lambda chunk: chunk.cosine_similarity, reverse=True,
+    )
+    unique: list[RetrievedChunk] = []
+    seen: set[str] = set()
+    for chunk in ranked:
+        text = " ".join(chunk.content.split())
+        if text not in seen:
+            seen.add(text)
+            unique.append(chunk)
+    selected: list[RetrievedChunk] = []
+    deferred: list[RetrievedChunk] = []
+    counts: Counter[str] = Counter()
+    for chunk in unique:
+        source = str(chunk.metadata.get("source_path") or chunk.metadata.get("episode_title") or chunk.content)
+        if counts[source] >= 2:
+            deferred.append(chunk)
+        else:
+            selected.append(chunk)
+            counts[source] += 1
+    return (selected + deferred)[:top_k]
+
+
+def prepare_context(chunks: list[RetrievedChunk], *, max_chars: int) -> list[RetrievedChunk]:
+    """Pack complete passages; track exactly what the model is allowed to cite."""
+    selected: list[RetrievedChunk] = []
+    for chunk in chunks:
+        if len(format_context([*selected, chunk])) <= max_chars:
+            selected.append(chunk)
+            continue
+        # Cut only at paragraph/sentence boundaries, keeping the preceding context.
+        header_size = len(format_context([RetrievedChunk("", chunk.metadata, chunk.cosine_similarity)]))
+        room = max_chars - len(format_context(selected)) - header_size - (7 if selected else 0)
+        prefix = chunk.content[:max(0, room)]
+        boundary = max(prefix.rfind("\n\n"), prefix.rfind(". ") + 1, prefix.rfind("? ") + 1)
+        if boundary >= 120:
+            selected.append(RetrievedChunk(prefix[:boundary], chunk.metadata, chunk.cosine_similarity))
+    return selected
 
 
 def format_context(chunks: list[RetrievedChunk], *, max_chars: int | None = None) -> str:
