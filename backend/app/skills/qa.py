@@ -11,7 +11,10 @@ Rules:
 2. If the context is insufficient, say: "I don't have enough transcript evidence to answer that."
 3. Do not use outside knowledge, even if you know the answer.
 4. Cite evidence by episode title, never by chunk number.
-5. Be concise, structured, and useful. Do not add a Sources section; the application adds it.
+5. Answer only the user's exact question. Do not add caveats about unrelated questions.
+6. Say "I don't have enough transcript evidence to answer that." only when the provided
+   context cannot answer the user's exact question.
+7. Be concise, structured, and useful. Do not add a Sources section; the application adds it.
 """
 
 
