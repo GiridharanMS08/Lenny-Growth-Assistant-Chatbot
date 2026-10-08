@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.core.config import get_settings
 from app.llm.base import BaseLLMClient, LLMMessage, LLMRequest
-from app.rag.retriever import format_context, retrieve_relevant_chunks
+from app.rag.retriever import format_context, format_sources, retrieve_relevant_chunks
 
 QA_SYSTEM_PROMPT = """You are The Lenny Growth Assistant, a transcript-grounded Q&A agent.
 
@@ -10,8 +10,8 @@ Rules:
 1. Answer ONLY using the provided transcript context.
 2. If the context is insufficient, say: "I don't have enough transcript evidence to answer that."
 3. Do not use outside knowledge, even if you know the answer.
-4. Mention relevant episode/guest names when present in the context.
-5. Be concise, structured, and useful.
+4. Cite evidence by episode title, never by chunk number.
+5. Be concise, structured, and useful. Do not add a Sources section; the application adds it.
 """
 
 
@@ -24,7 +24,7 @@ async def run_qa_skill(llm_client: BaseLLMClient, user_message: str) -> str:
     if not context:
         return "I don't have enough transcript evidence to answer that. Run the ingestion script first."
 
-    return (
+    answer = (
         await llm_client.complete(
             LLMRequest(
                 system_prompt=QA_SYSTEM_PROMPT,
@@ -43,3 +43,5 @@ async def run_qa_skill(llm_client: BaseLLMClient, user_message: str) -> str:
             )
         )
     ).content
+    sources = format_sources(chunks)
+    return f"{answer.rstrip()}\n\n**Sources**\n{sources}" if sources else answer

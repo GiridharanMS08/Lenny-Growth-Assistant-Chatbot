@@ -110,3 +110,17 @@ def format_context(chunks: list[RetrievedChunk], *, max_chars: int | None = None
             remaining -= len(formatted_chunk)
         formatted.append(formatted_chunk)
     return "\n\n---\n\n".join(formatted)
+
+
+def format_sources(chunks: list[RetrievedChunk]) -> str:
+    """Create a concise, de-duplicated source list for a user-facing answer."""
+    sources: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    for chunk in chunks:
+        title = str(chunk.metadata.get("episode_title") or "Unknown episode")
+        source = str(chunk.metadata.get("source_path") or "unknown source")
+        key = (title, source)
+        if key not in seen:
+            seen.add(key)
+            sources.append(f"- **{title}** — `{source}`")
+    return "\n".join(sources)

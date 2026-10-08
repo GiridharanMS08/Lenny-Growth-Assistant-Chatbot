@@ -40,11 +40,18 @@ async def test_qa_budget_changes_only_for_cloud_mode(monkeypatch, environment, p
     monkeypatch.setattr(qa, "get_settings", lambda: settings)
 
     async def retrieve(*args, **kwargs):
-        return [RetrievedChunk(content="Activation evidence", metadata={}, cosine_similarity=0.9)]
+        return [RetrievedChunk(
+            content="Activation evidence",
+            metadata={"episode_title": "Activation Deep Dive", "source_path": "activation.md"},
+            cosine_similarity=0.9,
+        )]
 
     monkeypatch.setattr(qa, "retrieve_relevant_chunks", retrieve)
     client = RecordingClient(provider)
-    assert await qa.run_qa_skill(client, "How can I improve activation?") == "Evidence-based answer"
+    answer = await qa.run_qa_skill(client, "How can I improve activation?")
+    assert "Evidence-based answer" in answer
+    assert "**Sources**" in answer
+    assert "**Activation Deep Dive** — `activation.md`" in answer
     assert client.requests[0].max_tokens == expected
     assert "Activation evidence" in client.requests[0].messages[0].content
 
