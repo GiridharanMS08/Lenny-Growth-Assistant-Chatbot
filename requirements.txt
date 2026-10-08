@@ -1,5 +1,6 @@
 # Railway detects Python from this root manifest.
 # Keep in sync with backend/requirements.txt (Railpack copies only this file before `pip install`, so `-r backend/requirements.txt` cannot be resolved).
+
 asyncpg>=0.29.0
 fastembed>=0.8.1,<0.9
 fastapi[standard]>=0.115.0
