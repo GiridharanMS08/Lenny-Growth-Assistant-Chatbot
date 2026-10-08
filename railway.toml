@@ -1,9 +1,0 @@
-[build]
-builder = "RAILPACK"
-buildCommand = "python -m pip install -r requirements.txt && python backend/prepare_cloud_model.py"
-
-[deploy]
-startCommand = "cd backend && exec uvicorn app.main:app --host 0.0.0.0 --port $PORT"
-healthcheckPath = "/health"
-healthcheckTimeout = 300
-restartPolicyType = "ON_FAILURE"
